@@ -1,6 +1,6 @@
 # tedx
 
-This repository so far holds the recipes for ASR systems using the tedx data scraped from the web, as well as recipes for aligning the speech to a fixed sentences,
+This repository so far holds the recipes for ASR systems using the tedx data scraped from the web, as well as recipes segmenting the speech according to existing sentences,
 such as those produced by an MT aligner. The recipes are meant to be run inside of Kaldi.
 
 ## Installation
