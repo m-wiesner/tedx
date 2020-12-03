@@ -7,12 +7,10 @@ speech=/export/b14/salesky/tedx
 text=/export/b14/ees/text-alignments
 
 src=fr
-tgt=en
 stage=0
 
 . ./utils/parse_options.sh
 
-text=${text}/${src}-${tgt}
 speech=${speech}/${src}
 
 if [ $stage -le 0 ]; then
@@ -128,49 +126,90 @@ if [ $stage -le 11 ]; then
 fi
 
 if [ $stage -le 12 ]; then
-  mkdir -p data/all_sentence
-  LC_ALL= python local/make_text_only.py --noise "<noise>" --keep-segments \
-    ${text} data/all_sentence/text
+  # Find all target languages
+  tgt_translations=( `find ${text}/ -type d -name "*fr-*"` )
+  for tt in ${tgt_translations[@]}; do
+    language_pair=`basename ${tt}`
+    target_language=${language_pair##fr-}
+    datadir=data/all_sentence_${target_language}
+    mkdir -p ${datadir}
+    LC_ALL= python local/make_text_only.py --noise "<noise>" --keep-segments \
+      ${tt} ${datadir}/text
 
-  ./local/align_ctm_ref.sh --nj 40 --cmd "$decode_cmd" \
-    exp/tri3_ali_unfilt/ctm data/all_sentence/text exp/tri3_ali_unfilt
+    segmentdir=exp/translate_ali_${target_language}
+    ./local/align_ctm_ref.sh --nj 40 --cmd "$decode_cmd" \
+      exp/tri3_ali_unfilt/ctm ${datadir}/text ${segmentdir}
 
-  failed_ctm_files=( `awk '($4-$3 == 0.0){print $1}' exp/tri3_ali_unfilt/segments` )
-  if [ ${#failed_ctm_files[@]} -ne 0 ]; then
-    echo "CTM shows alignment issues in the following segments ..."
-    for f in ${failed_ctm_files[@]}; do 
-      echo ${f}
-    done
-  fi
+    failed_ctm_files=( `awk '($4-$3 == 0.0){print $1}' ${segmentdir}/segments` )
+    if [ ${#failed_ctm_files[@]} -ne 0 ]; then
+      echo "CTM shows alignment issues in the following segments ..."
+      for f in ${failed_ctm_files[@]}; do 
+        echo ${f}
+      done
+    fi
 
-  overlapped_segments=( `awk 'BEGIN{ prev_val=0; prev_line=""} 
-  {
-    if(prev_val > $3 && $1 == prev_reco) {
-      print prev_line;
-      print $2
-    };
-    prev_line=$2;
-    prev_val=$4;
-    prev_reco=$1
-  }' exp/tri3_ali_unfilt/segments`
-  )
+    overlapped_segments=( `awk 'BEGIN{ prev_val=0; prev_line=""} 
+    {
+      if(prev_val > $3 && $2 == prev_reco) {
+        print prev_line;
+        print $1
+      };
+      prev_line=$1;
+      prev_val=$4;
+      prev_reco=$2
+    }' ${segmentdir}/segments`
+    )
 
-  if [ ${#overlapped_segments[@]} -ne 0 ]; then
-    echo "The following segments were overlapped."
-    for f in ${overlapped_segments[@]}; do
-      echo ${f}
-    done
-    echo ""
-    echo "This may indicate missing translations,"
-    echo "or that there are unaligned segments."
-    echo "Try realigning unfiltered data with a larger retry-beam."
-  fi 
-  
-  cp exp/tri3_ali_unfilt/segments data/all_sentence/
-  awk '{print $1, $2}' data/all_sentence/segments > data/all_sentence/utt2spk
-  ./utils/utt2spk_to_spk2utt.pl data/all_sentence/utt2spk > data/all_sentence/spk2utt
-  cp data/all_unfilt/wav.scp data/all_sentence/wav.scp    
+    if [ ${#overlapped_segments[@]} -ne 0 ]; then
+      echo "The following segments were overlapped."
+      for f in ${overlapped_segments[@]}; do
+        echo ${f}
+      done
+      echo ""
+      echo "This may indicate missing translations,"
+      echo "or that there are unaligned segments."
+      echo "Try realigning unfiltered data with a larger retry-beam."
+    fi 
+    
+    cp ${segmentdir}/segments ${datadir}
+    awk '{print $1, $2}' ${datadir}/segments > ${datadir}/utt2spk
+    ./utils/utt2spk_to_spk2utt.pl ${datadir}/utt2spk > ${datadir}/spk2utt
+    cp data/all_unfilt/wav.scp ${datadir}/wav.scp    
  
-  ./utils/fix_data_dir.sh data/all_sentence 
+    ./utils/fix_data_dir.sh ${datadir}
+  done
+fi
+
+if [ $stage -le 13 ]; then
+  tgt_translations=( `find ${text}/ -type d -name "*fr-*"` )
+  grep WER exp/*/decode*eval*/wer_* | ./utils/best_wer.sh > ${src}_statistics.txt
+  for tt in ${tgt_translations[@]}; do
+    language_pair=`basename ${tt}`
+    target_language=${language_pair##fr-}
+    datadir=data/all_sentence_${target_language}
+    echo "------------ ${target_language} Dataset Statistics: ----------------"
+    num_segs=`cat ${datadir}/segments | wc -l`
+    num_hrs=`awk '{sum+=$4-$3} END{print sum/3600}' ${datadir}/segments`
+    num_talks=`cat ${datadir}/wav.scp | wc -l`
+    num_src_words=`cat ${tt}/*.${src}.vtt* | tr " " "\n" | grep -v '^\s*$' | wc -l`
+    num_tgt_words=`cat ${tt}/*.${target_language}.vtt* | tr " " "\n" | grep -v '^\s*$' | wc -l`
+    num_src_types=`cat ${tt}/*.${src}.vtt* | tr " " "\n" | LC_ALL=C sort -u | grep -v '^\s*$' | wc -l`
+    num_tgt_types=`cat ${tt}/*.${target_language}.vtt* | tr " " "\n" | LC_ALL=C sort -u | grep -v '^\s*$' | wc -l`
+    avg_src_len=`echo "${num_src_words} ${num_segs}" | awk '{print $1/$2}'`
+    avg_tgt_len=`echo "${num_tgt_words} ${num_segs}" | awk '{print $1/$2}'`
+    avg_src_dur=`echo "${num_hrs} ${num_segs}" | awk '{print $1*3600/$2}'` 
+    echo "# Segments: ${num_segs}"
+    echo "# Hours: ${num_hrs}"
+    echo "# Talks: ${num_talks}"
+    echo "# Src Tokens: ${num_src_words}"
+    echo "# Src Types: ${num_src_types}"
+    echo "# Tgt Tokens: ${num_tgt_words}"
+    echo "# Tgt Types: ${num_tgt_types}"
+    echo "Avg # Words / Segment in Src: ${avg_src_len}"
+    echo "Avg # Words / Segment in Tgt: ${avg_tgt_len}"
+    echo "Avg Duration (s) / Segment in Src: ${avg_src_dur}"
+    echo ""
+    echo ""
+  done >> ${src}_statistics.txt 
 fi
 
