@@ -7,15 +7,16 @@ such as those produced by an MT aligner. The recipes are meant to be run inside 
 1. Make sure Kaldi is installed somewhere (KALDI_ROOT)
 2. Then in some directory run the following lines
 
-  ``
-  git clone https://github.com/m-wiesner/tedx.git
-  mv tedx KALDI_ROOT/egs/
-  ``
+  ```
+  git clone https://github.com/m-wiesner/tedx.git  
+  mv tedx $KALDI_ROOT/egs/
+  ```
+
 ## Aligning the Audio to the MT sentences
-1. Go to the tedx. direction
+1. Go to the tedx s5 directory
 
   ``cd KALDI_ROOT/egs/tedx/s5``
 
-2. Train a basic acoustic model, decode a held-out evaluation set to compute WER, align the MT data
+2. Train a basic acoustic model, decode a held-out evaluation set to compute WER, and align the MT data for language pairs specified in the text directory in run.sh:
 
-  ``./run.sh --src fr --tgt en``
+  ``./run.sh --src fr``
