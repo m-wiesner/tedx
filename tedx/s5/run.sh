@@ -121,11 +121,13 @@ if [ $stage -le 11 ]; then
 
   echo "Alignment failed for the following audio files ..."
   grep -o 'Did not successfully decode file [-_a-zA-Z0-9]*' exp/tri3_ali_unfilt/log/align_pass2.*.log
-
-  ./steps/get_train_ctm.sh --cmd "$train_cmd" data/all_unfilt_mfcc data/lang exp/tri3_ali_unfilt
 fi
 
 if [ $stage -le 12 ]; then
+  # Make ctm file
+  awk '{print $2, $2, 1}' data/all_unfilt_mfcc/segments > data/all_unfilt_mfcc/reco2file_and_channel
+  ./steps/get_train_ctm.sh --cmd "$train_cmd" data/all_unfilt_mfcc data/lang exp/tri3_ali_unfilt
+
   # Find all target languages
   tgt_translations=( `find ${text}/ -type d -name "*fr-*"` )
   for tt in ${tgt_translations[@]}; do
