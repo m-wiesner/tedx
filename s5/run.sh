@@ -129,10 +129,10 @@ if [ $stage -le 12 ]; then
   ./steps/get_train_ctm.sh --cmd "$train_cmd" data/all_unfilt_mfcc data/lang exp/tri3_ali_unfilt
 
   # Find all target languages
-  tgt_translations=( `find ${text}/ -type d -name "*fr-*"` )
+  tgt_translations=( `find ${text}/ -type d -name "*${src}-*"` )
   for tt in ${tgt_translations[@]}; do
     language_pair=`basename ${tt}`
-    target_language=${language_pair##fr-}
+    target_language=${language_pair##${src}-}
     datadir=data/all_sentence_${target_language}
     mkdir -p ${datadir}
     LC_ALL= python local/make_text_only.py --noise "<noise>" --keep-segments \
@@ -183,11 +183,11 @@ if [ $stage -le 12 ]; then
 fi
 
 if [ $stage -le 13 ]; then
-  tgt_translations=( `find ${text}/ -type d -name "*fr-*"` )
+  tgt_translations=( `find ${text}/ -type d -name "*${src}-*"` )
   grep WER exp/*/decode*eval*/wer_* | ./utils/best_wer.sh > ${src}_statistics.txt
   for tt in ${tgt_translations[@]}; do
     language_pair=`basename ${tt}`
-    target_language=${language_pair##fr-}
+    target_language=${language_pair##${src}-}
     datadir=data/all_sentence_${target_language}
     echo "------------ ${target_language} Dataset Statistics: ----------------"
     num_segs=`cat ${datadir}/segments | wc -l`
