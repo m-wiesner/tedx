@@ -200,21 +200,15 @@ if [ $stage -le 13 ]; then
     num_hrs=`awk '{sum+=$4-$3} END{print sum/3600}' ${datadir}/segments`
     num_talks=`cat ${datadir}/wav.scp | wc -l`
     num_src_words=`cat ${tt}/*.${src} | tr " " "\n" | grep -v '^\s*$' | wc -l`
-    num_tgt_words=`cat ${tt}/*.${target_language} | tr " " "\n" | grep -v '^\s*$' | wc -l`
     num_src_types=`cat ${tt}/*.${src} | tr " " "\n" | LC_ALL=C sort -u | grep -v '^\s*$' | wc -l`
-    num_tgt_types=`cat ${tt}/*.${target_language} | tr " " "\n" | LC_ALL=C sort -u | grep -v '^\s*$' | wc -l`
     avg_src_len=`echo "${num_src_words} ${num_segs}" | awk '{print $1/$2}'`
-    avg_tgt_len=`echo "${num_tgt_words} ${num_segs}" | awk '{print $1/$2}'`
     avg_src_dur=`echo "${num_hrs} ${num_segs}" | awk '{print $1*3600/$2}'` 
     echo "# Segments: ${num_segs}"
     echo "# Hours: ${num_hrs}"
     echo "# Talks: ${num_talks}"
     echo "# Src Tokens: ${num_src_words}"
     echo "# Src Types: ${num_src_types}"
-    echo "# Tgt Tokens: ${num_tgt_words}"
-    echo "# Tgt Types: ${num_tgt_types}"
     echo "Avg # Words / Segment in Src: ${avg_src_len}"
-    echo "Avg # Words / Segment in Tgt: ${avg_tgt_len}"
     echo "Avg Duration (s) / Segment in Src: ${avg_src_dur}"
     echo ""
     echo ""

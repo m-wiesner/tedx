@@ -74,7 +74,7 @@ def main():
 
     srcname = os.path.basename(args.speech)
     srcname = srcname.split('-')[0]
-    vtt_files = glob.glob('{}/*{}.vtt.txt'.format(args.speech, srcname))
+    vtt_files = glob.glob('{}/*{}'.format(args.speech, srcname))
     text = {}
     for fname in vtt_files:
         recoid = os.path.basename(fname).split('.')[0]

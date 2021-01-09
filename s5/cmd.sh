@@ -10,7 +10,7 @@
 # conf/queue.conf in http://kaldi-asr.org/doc/queue.html for more information,
 # or search for the string 'default_config' in utils/queue.pl or utils/slurm.pl.
 
-export train_cmd="queue.pl -l hostname='!b02*&!c24*&!c23*&!c27*&!c26*&!c25*&!a*'"
+export train_cmd="utils/retry.pl queue.pl -l hostname='!b02*&!c24*&!c23*&!c27*&!c26*&!c25*&!a*'"
 export decode_cmd="queue.pl --mem 2G -l hostname='!a*'"
 # the use of cuda_cmd is deprecated, used only in 'nnet1',
 export cuda_cmd="queue.pl --gpu 1"
