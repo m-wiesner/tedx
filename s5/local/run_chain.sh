@@ -27,7 +27,7 @@ set -e -o pipefail
 stage=0
 nj=30
 train_set=train
-test_sets="valid eval"
+test_sets="valid eval iwslt2021"
 gmm=tri3        # this is the source gmm-dir that we'll use for alignments; it
                 # should have alignments for the specified training data.
 num_threads_ubm=32
@@ -73,6 +73,7 @@ fi
 local/nnet3/run_ivector_common.sh \
   --stage $stage --nj $nj \
   --train-set $train_set --gmm $gmm \
+  --test-sets $test_sets
   --num-threads-ubm $num_threads_ubm \
   --nnet3-affix "$nnet3_affix"
 
