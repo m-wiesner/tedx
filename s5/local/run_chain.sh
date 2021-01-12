@@ -73,7 +73,7 @@ fi
 local/nnet3/run_ivector_common.sh \
   --stage $stage --nj $nj \
   --train-set $train_set --gmm $gmm \
-  --test-sets $test_sets
+  --test-sets $test_sets \
   --num-threads-ubm $num_threads_ubm \
   --nnet3-affix "$nnet3_affix"
 
