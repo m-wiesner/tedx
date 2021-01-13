@@ -26,6 +26,56 @@ def _read_text_line(l):
     )
 
 def align(ctm, segments):
+    '''
+        Takes a representation of a ctm and segments file and returns a
+        representation of the segmentation.
+        
+        Inputs: ctm -- [(recoid, (float(start), float(dur), word1)), ...]
+                segments -- [(uttid1, [word1, word2, ...]), (uttid2, [word1, word2, ...]), ...]
+
+        A dynamic program aligns the ctm file to a reference segmentation.
+        The words from the segmentation are treated as reference where
+        utterance boundary tokens are inserted to keep track of utterance
+        boundaries. The reference segmentation starts with a sentinal (empty)
+        utterance with end of utterance boundary symbol <s>,
+        name <s> because it is the start of the reference segmentation of the
+        speech recording with id=recoid.
+        
+        The reference are the columns in the dynamic programming table
+        (row x col). The hypothesis words are from the ctm file. They are rows
+        in the table. 
+        
+        There can be holes in both the ctm and/or the segmentation: holes in
+        the ctm occur when there is text in the reference segmentation that
+        does not occur in the ctm. This generally happens when there is speech
+        that was not able to be aligned due to erroneous, or non-standard
+        transcription practices.
+        
+        Holes in the reference segmentation occur when portions of audio data
+        were also not properly transcribed, or if the translation for a portion
+        of the audio file is missing.
+        
+        Holes in the reference segmentation:
+        -------------------------------------
+        There are two cases. The holes can be internal to a reference sentence
+        or between reference segments. 
+        
+            Case 1: Internal holes
+                This is a normal case and the insertion cost is 1.0
+            Case 2: Holes between segments
+                We want to align the ctm tokens to a sentence boundary token
+                rather than substitute them. We allow for a lower insertion
+                cost at sentence boundaries than elsewhere 
+
+        Holes in the ctm (or extra text, e.g. sentence boundaries,
+        in the reference segmentation):
+        ------------------------------
+        Extra text that doesn't occur in the ctm should always be aligned to a
+        single word in the ctm. Since we know sentence boundary tokens never
+        occur in the ctm, the cost of deleting these is set to 0.
+        Otherwise the deletion cost is normal.
+        
+    '''
     ref_words = ['<s>']
     sentence_boundaries = set(['<s>'])
     for s in segments :
@@ -44,8 +94,8 @@ def align(ctm, segments):
     for i in range(1, len(ctm) + 1):
         for j in range(1, len(ref_words) + 1): 
             sub_cost = (ref_words[j-1] != ctm[i-1][2])
-            ins_cost = 0.5
-            del_cost = 0.0 if ref_words[j-1] in sentence_boundaries else 2.0
+            ins_cost = 0.5 if ref_words[j-1] in sentence_boundaries else 1.0
+            del_cost = 0.0 if ref_words[j-1] in sentence_boundaries else 1.0
             next_state_costs = [
                 costs[i-1][j-1] + sub_cost,
                 costs[i-1][j] + ins_cost,
@@ -68,14 +118,19 @@ def align(ctm, segments):
           
         best_transition = backtrace[i][j] 
         print(i, j, best_transition, start, end, segmentation[sentence], ref_words[j-1], ctm[i-1])
+        # Substitution
         if best_transition == 0:
             i -= 1
             j -= 1
+        # Insertion
         elif best_transition == 1:
             i -=1
+        # Deletion
         elif best_transition == 2:
             j -= 1
         
+        # Only look at the reference words that are not sentence boundaries
+        # when updating timing information.
         if best_transition != 1 or word not in sentence_boundaries:
             if start < segmentation[sentence][0]:
                 segmentation[sentence][0] = start
