@@ -11,7 +11,7 @@
 # or search for the string 'default_config' in utils/queue.pl or utils/slurm.pl.
 
 export train_cmd="utils/retry.pl queue.pl -l hostname='!b02*&!c24*&!c23*&!c27*&!c26*&!c25*&!a*'"
-export decode_cmd="queue.pl --mem 2G -l hostname='!a*'"
+export decode_cmd="queue.pl --mem 2G -l hostname='b0[3456789]*'"
 # the use of cuda_cmd is deprecated, used only in 'nnet1',
 export cuda_cmd="queue.pl --gpu 1"
 
