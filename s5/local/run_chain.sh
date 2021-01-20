@@ -71,12 +71,11 @@ EOF
 fi
 
 local/nnet3/run_ivector_common.sh \
-  --stage $stage --nj $nj \
+  --stage $stage --nj 80 \
   --train-set $train_set --gmm $gmm \
-  --test-sets $test_sets \
+  --test-sets "$test_sets" \
   --num-threads-ubm $num_threads_ubm \
   --nnet3-affix "$nnet3_affix"
-
 
 
 gmm_dir=exp/${gmm}
@@ -96,7 +95,8 @@ tree_dir=exp/chain${nnet3_affix}/tree_a_sp
 # you should probably name it differently.
 lang=data/lang_chain
 
-for f in $train_data_dir/feats.scp $train_ivector_dir/ivector_online.scp \
+
+for f in $train_data_dir/feats.scp \
     $lores_train_data_dir/feats.scp $gmm_dir/final.mdl \
     $ali_dir/ali.1.gz $gmm_dir/final.mdl; do
   [ ! -f $f ] && echo "$0: expected file $f to exist" && exit 1
@@ -150,7 +150,6 @@ if [ $stage -le 14 ]; then
     $lang $ali_dir $tree_dir
 fi
 
-
 if [ $stage -le 15 ]; then
   mkdir -p $dir
   echo "$0: creating neural net configs using the xconfig parser";
@@ -168,7 +167,7 @@ if [ $stage -le 15 ]; then
 
   mkdir -p $dir/configs
   cat <<EOF > $dir/configs/network.xconfig
-  input dim=100 name=ivector
+  #input dim=100 name=ivector
   input dim=40 name=input
 
   # this takes the MFCCs and generates filterbank coefficients.  The MFCCs
@@ -176,11 +175,11 @@ if [ $stage -le 15 ]; then
   # than filterbanks.
   idct-layer name=idct input=input dim=40 cepstral-lifter=22 affine-transform-file=$dir/configs/idct.mat
 
-  linear-component name=ivector-linear $ivector_affine_opts dim=200 input=ReplaceIndex(ivector, t, 0)
-  batchnorm-component name=ivector-batchnorm target-rms=0.025
+  #linear-component name=ivector-linear $ivector_affine_opts dim=200 input=ReplaceIndex(ivector, t, 0)
+  #batchnorm-component name=ivector-batchnorm target-rms=0.025
 
   batchnorm-component name=idct-batchnorm input=idct
-  combine-feature-maps-layer name=combine_inputs input=Append(idct-batchnorm, ivector-batchnorm) num-filters1=1 num-filters2=5 height=40
+  #combine-feature-maps-layer name=combine_inputs input=Append(idct-batchnorm, ivector-batchnorm) num-filters1=1 num-filters2=5 height=40
 
   conv-relu-batchnorm-layer name=cnn1 $cnn_opts height-in=40 height-out=40 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=48 learning-rate-factor=0.333 max-change=0.25
   conv-relu-batchnorm-layer name=cnn2 $cnn_opts height-in=40 height-out=40 time-offsets=-1,0,1 height-offsets=-1,0,1 num-filters-out=48
@@ -220,8 +219,7 @@ if [ $stage -le 16 ]; then
 
   steps/nnet3/chain/train.py --stage=$train_stage \
     --cmd="$decode_cmd" \
-    --feat.online-ivector-dir=$train_ivector_dir \
-    --feat.cmvn-opts="--norm-means=false --norm-vars=false" \
+    --feat.cmvn-opts="--norm-means=true --norm-vars=false" \
     --chain.xent-regularize $xent_regularize \
     --chain.leaky-hmm-coefficient=0.1 \
     --chain.l2-regularize=0.0 \
@@ -249,7 +247,5 @@ if [ $stage -le 16 ]; then
     --lat-dir=$lat_dir \
     --dir=$dir  || exit 1;
 fi
-
-# Decode
 
 exit 0;
