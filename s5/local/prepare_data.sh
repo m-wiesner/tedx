@@ -88,7 +88,7 @@ if [ $stage -le 1 ]; then
   ./local/create_wikipron_lex.sh <(cut -d' ' -f2- data/lm/vocab.map) ${!lexicon} \
     data/g2p data/g2p/vocab data/dict/lexicon.tmp
   
-  LC_ALL= python local/fix_lexicon.py data/dict/lexicon.tmp | LC_ALL=C sort > data/dict/lexicon.txt
+  LC_ALL= python local/fix_lexicon.py data/dict/lexicon.tmp | LC_ALL=C sort -u > data/dict/lexicon.txt
 fi
 
 ./utils/fix_data_dir.sh ${data}
