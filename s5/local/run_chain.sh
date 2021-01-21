@@ -218,7 +218,7 @@ if [ $stage -le 16 ]; then
   fi
 
   steps/nnet3/chain/train.py --stage=$train_stage \
-    --cmd="$decode_cmd" \
+    --cmd="$train_cmd" \
     --feat.cmvn-opts="--norm-means=true --norm-vars=false" \
     --chain.xent-regularize $xent_regularize \
     --chain.leaky-hmm-coefficient=0.1 \
