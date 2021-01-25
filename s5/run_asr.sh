@@ -6,15 +6,15 @@
 
 speech=/export/c24/salesky/tedx
 text=/export/c24/salesky/tedx/text
-exp_prefix="../s5_"
+sent_prefix="/export/b14/salesky/kaldi/egs/tedx/"
 
-src=fr
+src=it
 stage=0
 
 . ./utils/parse_options.sh
 
 speech=${speech}/${src}
-all_sent=${exp_prefix}${src}/data/all_sentence_asr
+all_sents=${sent_prefix}${src}/data/all_sentence_asr
 
 if [ $stage -le 0 ]; then
   ./local/prepare_data.sh --stage 0 $speech data/all
@@ -141,12 +141,16 @@ fi
 if [ $stage -eq 10 ]; then
   modeldir=exp/chain/cnn_tdnn1c_sp
   lang=data/lang_sentence
+  ./utils/copy_data_dir.sh ${all_sents} data/train_sentence
+  ./utils/filter_scp.pl -f 2 data/train/wav.scp ${all_sents}/segments > data/train_sentence/segments
+  ./utils/fix_data_dir.sh data/train_sentence
+  
   for data in valid eval iwslt2021; do
     ./utils/copy_data_dir.sh ${all_sents} data/${data}_sentence
-    ./utils/filter_scp.pl -f 2 data/${data}/wav.scp ${all_sent}/segments > data/${data}_sentence/segments
+    ./utils/filter_scp.pl -f 2 data/${data}/wav.scp ${all_sents}/segments > data/${data}_sentence/segments
     ./utils/fix_data_dir.sh data/${data}_sentence
     ./utils/copy_data_dir.sh data/${data}_sentence data/${data}_sentence_hires
-    ./steps/make_mfcc.sh --nj 40 --config conf/mfcc_hires.conf \
+    ./steps/make_mfcc.sh --nj 40 --mfcc-config conf/mfcc_hires.conf \
       --cmd "$train_cmd" data/${data}_sentence_hires
     ./steps/compute_cmvn_stats.sh data/${data}_sentence_hires
     ./utils/fix_data_dir.sh data/${data}_sentence_hires   
@@ -163,15 +167,16 @@ if [ $stage -eq 10 ]; then
   ./utils/format_lm.sh ${lang} data/lm_sentence/lm.gz \
     data/dict/lexicon.txt ${lang}
 
-  ./utils/mkgraph.sh --self-loop-scale 1.0 ${lang} data/chain/tree_a_sp \
+  ./utils/mkgraph.sh --self-loop-scale 1.0 ${lang} exp/chain/tree_a_sp \
     exp/chain/tree_a_sp/graph_sentence
  
-  for data in valid eval iwslt2021; do
+  for data in eval iwslt2021; do
     nj=`cat data/${data}_sentence_hires/spk2utt | wc -l`
     ./steps/nnet3/decode.sh \
       --acwt 1.0 --post-decode-acwt 10.0 \
       --frames-per-chunk 140 \
       --nj ${nj} --cmd "$decode_cmd" \
+      --skip-scoring true \
       exp/chain/tree_a_sp/graph data/${data}_sentence_hires \
       ${modeldir}/decode_${data}_sentence || exit 1
 
@@ -196,10 +201,8 @@ if [ $stage -le 11 ]; then
   for data in valid eval; do
     lattice-scale --inv-acoustic-scale=${lmwt} ark:"gunzip -c ${modeldir}/decode_${data}_sentence/lat.*.gz |" ark:- |\
     lattice-add-penalty --word-ins-penalty=${wip} ark:- ark:- |\
-    lattice-best-path --word-symbol-table=${lang}/words.txt ark: ark,t:- |\
-    utils/int2sym.pl -f 2- ${lang}/words.txt |\
-    awk '(NR==FNR){a[$1]=$0;next} ($1 in a){print a[$1]}' - splits/${data}.${src} \
-    > data/${data}_sentence/text.hyp 
+    lattice-best-path --word-symbol-table=${lang}/words.txt ark:- ark,t:- |\
+    utils/int2sym.pl -f 2- ${lang}/words.txt > data/${data}_sentence/text.hyp 
   done
 fi 
 
