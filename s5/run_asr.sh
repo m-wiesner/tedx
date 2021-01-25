@@ -6,6 +6,7 @@
 
 speech=/export/c24/salesky/tedx
 text=/export/c24/salesky/tedx/text
+exp_prefix="../s5_"
 
 src=fr
 stage=0
@@ -13,6 +14,7 @@ stage=0
 . ./utils/parse_options.sh
 
 speech=${speech}/${src}
+all_sent=${exp_prefix}${src}/data/all_sentence_asr
 
 if [ $stage -le 0 ]; then
   ./local/prepare_data.sh --stage 0 $speech data/all
@@ -116,18 +118,18 @@ if [ $stage -eq 9 ]; then
   ./local/train_lm.sh data/dict/lexicon.txt data/lm/train_text data/lm/dev_text data/lm
   ./utils/format_lm.sh data/lang data/lm/lm.gz data/dict/lexicon.txt data/lang
 
-  ./utils/mkgraph.sh --self-loop 1.0 data/lang exp/chain/tree_a_sp exp/chain/tree_a_sp/graph
-
+  ./utils/mkgraph.sh --self-loop-scale 1.0 data/lang exp/chain/tree_a_sp exp/chain/tree_a_sp/graph
+  
   # Have more than 40 speakers, so nj can be greater than 40
   for data in valid eval iwslt2021; do
-      ./steps/nnet3/decode.sh \
-          --acwt 1.0 --post-decode-acwt 10.0 \
-          --frames-per-chunk 140 \
-          --nj 40 --cmd "$decode_cmd" \
-          --online-ivector-dir exp/nnet3/ivectors_${data}_hires \
-          exp/chain/tree_a_sp/graph data/${data}_hires exp/chain/cnn_tdnn1c_sp/decode_${data} || exit 1
+    nj=`cat data/${data}_hires/spk2utt | wc -l`
+    ./steps/nnet3/decode.sh \
+        --acwt 1.0 --post-decode-acwt 10.0 \
+        --frames-per-chunk 140 \
+        --nj ${nj} --cmd "$decode_cmd" \
+        exp/chain/tree_a_sp/graph data/${data}_hires exp/chain/cnn_tdnn1c_sp/decode_${data} || exit 1
 
-      ./steps/score_kaldi.sh --min-lmwt 6 --max-lmwt 18 --cmd "$decode_cmd" data/${data}_hires data/lang exp/chain/cnn_tdnn1c_sp/decode_${data}
+    ./steps/score_kaldi.sh --min-lmwt 6 --max-lmwt 18 --cmd "$decode_cmd" data/${data}_hires data/lang exp/chain/cnn_tdnn1c_sp/decode_${data}
   done
 
   grep WER exp/chain/cnn_tdnn1c_sp/decode_valid/wer* | ./utils/best_wer.sh
@@ -135,3 +137,78 @@ if [ $stage -eq 9 ]; then
   grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer* | ./utils/best_wer.sh
 fi
 
+# Decode Sentence-level segments
+if [ $stage -eq 10 ]; then
+  modeldir=exp/chain/cnn_tdnn1c_sp
+  lang=data/lang_sentence
+  for data in valid eval iwslt2021; do
+    ./utils/copy_data_dir.sh ${all_sents} data/${data}_sentence
+    ./utils/filter_scp.pl -f 2 data/${data}/wav.scp ${all_sent}/segments > data/${data}_sentence/segments
+    ./utils/fix_data_dir.sh data/${data}_sentence
+    ./utils/copy_data_dir.sh data/${data}_sentence data/${data}_sentence_hires
+    ./steps/make_mfcc.sh --nj 40 --config conf/mfcc_hires.conf \
+      --cmd "$train_cmd" data/${data}_sentence_hires
+    ./steps/compute_cmvn_stats.sh data/${data}_sentence_hires
+    ./utils/fix_data_dir.sh data/${data}_sentence_hires   
+  done
+  
+  mkdir -p data/lm_sentence
+  cp data/train_sentence/text data/lm_sentence/train_text
+  cp data/valid_sentence/text data/lm_sentence/dev_text
+  ./local/train_lm.sh data/dict/lexicon.txt data/lm_sentence/train_text \
+    data/lm_sentence/dev_text data/lm_sentence
+  
+  cp -r data/lang ${lang}
+  rm ${lang}/G.fst
+  ./utils/format_lm.sh ${lang} data/lm_sentence/lm.gz \
+    data/dict/lexicon.txt ${lang}
+
+  ./utils/mkgraph.sh --self-loop-scale 1.0 ${lang} data/chain/tree_a_sp \
+    exp/chain/tree_a_sp/graph_sentence
+ 
+  for data in valid eval iwslt2021; do
+    nj=`cat data/${data}_sentence_hires/spk2utt | wc -l`
+    ./steps/nnet3/decode.sh \
+      --acwt 1.0 --post-decode-acwt 10.0 \
+      --frames-per-chunk 140 \
+      --nj ${nj} --cmd "$decode_cmd" \
+      exp/chain/tree_a_sp/graph data/${data}_sentence_hires \
+      ${modeldir}/decode_${data}_sentence || exit 1
+
+    ./steps/score_kaldi.sh --min-lmwt 6 --max-lmwt 18 --cmd "$decode_cmd" \
+      data/${data}_sentence_hires ${lang} ${modeldir}/decode_${data}_sentence
+  done
+  
+  grep WER exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer* | ./utils/best_wer.sh
+  grep WER exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer* | ./utils/best_wer.sh
+  grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer* | ./utils/best_wer.sh
+fi 
+
+# Get 1-best transcription for sentence-level segments for downstream MT
+# in the order specified in splits
+if [ $stage -le 11 ]; then
+  modeldir=exp/chain/cnn_tdnn1c_sp
+  wip=`cat exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/scoring_kaldi/wer_details/wip`
+  lmwt=`cat exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/scoring_kaldi/wer_details/lmwt`
+  lang=data/lang_sentence
+
+  # Apparently there are no splits for iwslt2021
+  for data in valid eval; do
+    lattice-scale --inv-acoustic-scale=${lmwt} ark:"gunzip -c ${modeldir}/decode_${data}_sentence/lat.*.gz |" ark:- |\
+    lattice-add-penalty --word-ins-penalty=${wip} ark:- ark:- |\
+    lattice-best-path --word-symbol-table=${lang}/words.txt ark: ark,t:- |\
+    utils/int2sym.pl -f 2- ${lang}/words.txt |\
+    awk '(NR==FNR){a[$1]=$0;next} ($1 in a){print a[$1]}' - splits/${data}.${src} \
+    > data/${data}_sentence/text.hyp 
+  done
+fi 
+
+# Make a results file
+touch RESULTS
+grep WER exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer* | ./utils/best_wer.sh >> RESULTS
+grep WER exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer* | ./utils/best_wer.sh >> RESULTS
+grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer* | ./utils/best_wer.sh >> RESULTS
+
+grep WER exp/chain/cnn_tdnn1c_sp/decode_valid/wer* | ./utils/best_wer.sh >> RESULTS
+grep WER exp/chain/cnn_tdnn1c_sp/decode_eval/wer* | ./utils/best_wer.sh >> RESULTS
+grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer* | ./utils/best_wer.sh >> RESULTS
