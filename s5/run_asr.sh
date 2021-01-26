@@ -202,16 +202,18 @@ if [ $stage -le 11 ]; then
     lattice-scale --inv-acoustic-scale=${lmwt} ark:"gunzip -c ${modeldir}/decode_${data}_sentence/lat.*.gz |" ark:- |\
     lattice-add-penalty --word-ins-penalty=${wip} ark:- ark:- |\
     lattice-best-path --word-symbol-table=${lang}/words.txt ark:- ark,t:- |\
-    utils/int2sym.pl -f 2- ${lang}/words.txt > data/${data}_sentence/text.hyp 
+    utils/int2sym.pl -f 2- ${lang}/words.txt > data/${data}_sentence/text.hyp
+    
+    for k in `cat splits/${data}.it`; do grep ${k} data/${data}_sentence/text.hyp | sort; done > data/${data}_sentence/text.hyp.sorted 
   done
 fi 
 
 # Make a results file
-touch RESULTS
-grep WER exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer* | ./utils/best_wer.sh >> RESULTS
-grep WER exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer* | ./utils/best_wer.sh >> RESULTS
-grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer* | ./utils/best_wer.sh >> RESULTS
+touch RESULTS.${src}
+grep WER exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer* | ./utils/best_wer.sh >> RESULTS.${src}
+grep WER exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer* | ./utils/best_wer.sh >> RESULTS.${src}
+grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer* | ./utils/best_wer.sh >> RESULTS.${src}
 
-grep WER exp/chain/cnn_tdnn1c_sp/decode_valid/wer* | ./utils/best_wer.sh >> RESULTS
-grep WER exp/chain/cnn_tdnn1c_sp/decode_eval/wer* | ./utils/best_wer.sh >> RESULTS
-grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer* | ./utils/best_wer.sh >> RESULTS
+grep WER exp/chain/cnn_tdnn1c_sp/decode_valid/wer* | ./utils/best_wer.sh >> RESULTS.${src}
+grep WER exp/chain/cnn_tdnn1c_sp/decode_eval/wer* | ./utils/best_wer.sh >> RESULTS.${src}
+grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer* | ./utils/best_wer.sh >> RESULTS.${src}
