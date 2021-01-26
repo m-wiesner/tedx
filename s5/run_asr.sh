@@ -170,7 +170,7 @@ if [ $stage -eq 10 ]; then
   ./utils/mkgraph.sh --self-loop-scale 1.0 ${lang} exp/chain/tree_a_sp \
     exp/chain/tree_a_sp/graph_sentence
  
-  for data in eval iwslt2021; do
+  for data in valid eval iwslt2021; do
     nj=`cat data/${data}_sentence_hires/spk2utt | wc -l`
     ./steps/nnet3/decode.sh \
       --acwt 1.0 --post-decode-acwt 10.0 \
