@@ -110,7 +110,7 @@ fi
 
 # Train chain 
 if [ $stage -le 8 ]; then
-    local/run_chain.sh --test-sets "valid eval"#--stage 16 --train-stage <last iternum that finished>
+    local/run_chain.sh --test-sets "valid eval" #--stage 16 --train-stage <last iternum that finished>
 fi
 
 # Decode to check ASR performance
