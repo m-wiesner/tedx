@@ -8,7 +8,7 @@ speech=/export/c24/salesky/tedx
 text=/export/c24/salesky/tedx/text
 sent_prefix="/export/b14/salesky/kaldi/egs/tedx/"
 
-src=pt
+src=it
 stage=0
 
 . ./utils/parse_options.sh
@@ -202,7 +202,9 @@ if [ $stage -le 11 ]; then
     lattice-scale --inv-acoustic-scale=${lmwt} ark:"gunzip -c ${modeldir}/decode_${data}_sentence/lat.*.gz |" ark:- |\
     lattice-add-penalty --word-ins-penalty=${wip} ark:- ark:- |\
     lattice-best-path --word-symbol-table=${lang}/words.txt ark:- ark,t:- |\
-    utils/int2sym.pl -f 2- ${lang}/words.txt > data/${data}_sentence/text.hyp
+    utils/int2sym.pl -f 2- ${lang}/words.txt |\
+    awk '(NR==FNR){a[$1]=$0; next} {if($1 in a){print a[$1]} else{print $1}}' - data/${data}_sentence/text \
+    > data/${data}_sentence/text.hyp
     
     for k in `cat splits/${data}.${src}`; do grep ${k} data/${data}_sentence/text.hyp | sort; done > data/${data}_sentence/text.hyp.sorted 
   done
