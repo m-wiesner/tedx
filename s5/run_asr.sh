@@ -8,7 +8,7 @@ speech=/export/c24/salesky/tedx
 text=/export/c24/salesky/tedx/text
 sent_prefix="/export/b14/salesky/kaldi/egs/tedx/"
 
-src=it
+src=pt
 stage=0
 
 . ./utils/parse_options.sh
@@ -111,9 +111,8 @@ if [ $stage -eq 9 ]; then
   num_train_utts=$(($num_utts - $num_valid_utts)) 
   
   mkdir -p data/lm
-  shuf data/train/text > data/lm/text.shuf
-  head -n $num_train_utts data/lm/text.shuf > data/lm/train_text
-  tail -n $num_valid_utts data/lm/text.shuf > data/lm/dev_text
+  cp data/train/text data/lm/train_text
+  cp data/valid/text data/lm/dev_text
   
   ./local/train_lm.sh data/dict/lexicon.txt data/lm/train_text data/lm/dev_text data/lm
   ./utils/format_lm.sh data/lang data/lm/lm.gz data/dict/lexicon.txt data/lang
@@ -127,6 +126,7 @@ if [ $stage -eq 9 ]; then
         --acwt 1.0 --post-decode-acwt 10.0 \
         --frames-per-chunk 140 \
         --nj ${nj} --cmd "$decode_cmd" \
+        --skip-scoring true \
         exp/chain/tree_a_sp/graph data/${data}_hires exp/chain/cnn_tdnn1c_sp/decode_${data} || exit 1
 
     ./steps/score_kaldi.sh --min-lmwt 6 --max-lmwt 18 --cmd "$decode_cmd" data/${data}_hires data/lang exp/chain/cnn_tdnn1c_sp/decode_${data}
@@ -138,7 +138,7 @@ if [ $stage -eq 9 ]; then
 fi
 
 # Decode Sentence-level segments
-if [ $stage -eq 10 ]; then
+if [ $stage -le 10 ]; then
   modeldir=exp/chain/cnn_tdnn1c_sp
   lang=data/lang_sentence
   ./utils/copy_data_dir.sh ${all_sents} data/train_sentence
@@ -204,7 +204,7 @@ if [ $stage -le 11 ]; then
     lattice-best-path --word-symbol-table=${lang}/words.txt ark:- ark,t:- |\
     utils/int2sym.pl -f 2- ${lang}/words.txt > data/${data}_sentence/text.hyp
     
-    for k in `cat splits/${data}.it`; do grep ${k} data/${data}_sentence/text.hyp | sort; done > data/${data}_sentence/text.hyp.sorted 
+    for k in `cat splits/${data}.${src}`; do grep ${k} data/${data}_sentence/text.hyp | sort; done > data/${data}_sentence/text.hyp.sorted 
   done
 fi 
 
