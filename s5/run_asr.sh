@@ -35,6 +35,7 @@ if [ $stage -le 2 ]; then
   utils/copy_data_dir.sh data/all_mfcc data/train
   cat splits/*.${src} | utils/filter_scp.pl --exclude - data/all_mfcc/wav.scp > data/train/wav.scp
   utils/fix_data_dir.sh data/train
+  
   cut -d' ' -f2- data/train/text | tr " " "\n" | LC_ALL=C sort -u | grep -v '^\s*$' > data/dict/vocab.train
   grep "^<" data/dict/lexicon.txt > data/dict/silence_lexicon.txt
   cat data/dict/vocab.train | grep -Ff - data/dict/lexicon.txt > data/dict/nonsilence_lexicon.txt
@@ -60,6 +61,14 @@ if [ $stage -le 3 ]; then
   utils/filter_scp.pl -f 2 splits/valid.${src} data/all_mfcc/segments > data/valid/segments
   utils/fix_data_dir.sh data/valid
 
+  for ds in valid eval; do
+    shared=`comm -12 <(awk '{print $1}' data/train/wav.scp | LC_ALL=C sort) <(awk '{print $1}' data/${ds}/wav.scp | LC_ALL=C sort)`
+    if [ ! -z $shared ]; then
+      echo "File $shared was seen in train and valid. Splits were not well defined/properly formatted."
+      exit 1;
+    fi
+  done
+  
   #utils/copy_data_dir.sh data/all_mfcc data/iwslt2021
   #utils/filter_scp.pl -f 2 splits/iwslt2021.${src} data/all_mfcc/segments > data/iwslt2021/segments
   #utils/fix_data_dir.sh data/iwslt2021
