@@ -100,12 +100,12 @@ if [ $stage -le 7 ]; then
 fi
 
 # Train chain 
-if [ $stage -eq 8 ]; then
+if [ $stage -le 8 ]; then
     local/run_chain.sh #--stage 16 --train-stage <last iternum that finished>
 fi
 
 # Decode to check ASR performance
-if [ $stage -eq 9 ]; then
+if [ $stage -le 9 ]; then
   num_utts=`cat data/train/text | wc -l`
   num_valid_utts=$(($num_utts/10))
   num_train_utts=$(($num_utts - $num_valid_utts)) 
