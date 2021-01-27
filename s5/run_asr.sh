@@ -60,9 +60,9 @@ if [ $stage -le 3 ]; then
   utils/filter_scp.pl -f 2 splits/valid.${src} data/all_mfcc/segments > data/valid/segments
   utils/fix_data_dir.sh data/valid
 
-  utils/copy_data_dir.sh data/all_mfcc data/iwslt2021
-  utils/filter_scp.pl -f 2 splits/iwslt2021.${src} data/all_mfcc/segments > data/iwslt2021/segments
-  utils/fix_data_dir.sh data/iwslt2021
+  #utils/copy_data_dir.sh data/all_mfcc data/iwslt2021
+  #utils/filter_scp.pl -f 2 splits/iwslt2021.${src} data/all_mfcc/segments > data/iwslt2021/segments
+  #utils/fix_data_dir.sh data/iwslt2021
 
   utils/subset_data_dir.sh --shortest data/train 10000 data/train_10kshort
 fi
@@ -101,7 +101,7 @@ fi
 
 # Train chain 
 if [ $stage -le 8 ]; then
-    local/run_chain.sh #--stage 16 --train-stage <last iternum that finished>
+    local/run_chain.sh --test-sets "valid eval"#--stage 16 --train-stage <last iternum that finished>
 fi
 
 # Decode to check ASR performance
@@ -120,7 +120,7 @@ if [ $stage -le 9 ]; then
   ./utils/mkgraph.sh --self-loop-scale 1.0 data/lang exp/chain/tree_a_sp exp/chain/tree_a_sp/graph
   
   # Have more than 40 speakers, so nj can be greater than 40
-  for data in valid eval iwslt2021; do
+  for data in valid eval; do
     nj=`cat data/${data}_hires/spk2utt | wc -l`
     ./steps/nnet3/decode.sh \
         --acwt 1.0 --post-decode-acwt 10.0 \
@@ -134,7 +134,6 @@ if [ $stage -le 9 ]; then
 
   grep WER exp/chain/cnn_tdnn1c_sp/decode_valid/wer* | ./utils/best_wer.sh
   grep WER exp/chain/cnn_tdnn1c_sp/decode_eval/wer* | ./utils/best_wer.sh
-  grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer* | ./utils/best_wer.sh
 fi
 
 # Decode Sentence-level segments
@@ -145,7 +144,7 @@ if [ $stage -le 10 ]; then
   ./utils/filter_scp.pl -f 2 data/train/wav.scp ${all_sents}/segments > data/train_sentence/segments
   ./utils/fix_data_dir.sh data/train_sentence
   
-  for data in valid eval iwslt2021; do
+  for data in valid eval; do
     ./utils/copy_data_dir.sh ${all_sents} data/${data}_sentence
     ./utils/filter_scp.pl -f 2 data/${data}/wav.scp ${all_sents}/segments > data/${data}_sentence/segments
     ./utils/fix_data_dir.sh data/${data}_sentence
@@ -170,7 +169,7 @@ if [ $stage -le 10 ]; then
   ./utils/mkgraph.sh --self-loop-scale 1.0 ${lang} exp/chain/tree_a_sp \
     exp/chain/tree_a_sp/graph_sentence
  
-  for data in valid eval iwslt2021; do
+  for data in valid eval; do
     nj=`cat data/${data}_sentence_hires/spk2utt | wc -l`
     ./steps/nnet3/decode.sh \
       --acwt 1.0 --post-decode-acwt 10.0 \
@@ -186,7 +185,6 @@ if [ $stage -le 10 ]; then
   
   grep WER exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer* | ./utils/best_wer.sh
   grep WER exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer* | ./utils/best_wer.sh
-  grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer* | ./utils/best_wer.sh
 fi 
 
 # Get 1-best transcription for sentence-level segments for downstream MT
@@ -214,8 +212,6 @@ fi
 touch RESULTS.${src}
 grep WER exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer* | ./utils/best_wer.sh >> RESULTS.${src}
 grep WER exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer* | ./utils/best_wer.sh >> RESULTS.${src}
-grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer* | ./utils/best_wer.sh >> RESULTS.${src}
 
 grep WER exp/chain/cnn_tdnn1c_sp/decode_valid/wer* | ./utils/best_wer.sh >> RESULTS.${src}
 grep WER exp/chain/cnn_tdnn1c_sp/decode_eval/wer* | ./utils/best_wer.sh >> RESULTS.${src}
-grep WER exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer* | ./utils/best_wer.sh >> RESULTS.${src}
