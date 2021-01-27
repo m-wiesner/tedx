@@ -91,17 +91,17 @@ if [ $stage -le 5 ]; then
   # have multiple copies of Kaldi checked out and run the same recipe, not to let
   # them overwrite each other.
   mfccdir=data/${train_set}_sp_hires/data
-  #if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d $mfccdir/storage ]; then
-  #  utils/create_split_dir.pl /export/b0{5,6,7,8}/$USER/kaldi-data/mfcc/tedx-$(date +'%m_%d_%H_%M')/s5/$mfccdir/storage $mfccdir/storage
-  #fi
+  if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d $mfccdir/storage ]; then
+    utils/create_split_dir.pl /export/b0{5,6,7,8}/$USER/kaldi-data/mfcc/tedx-$(date +'%m_%d_%H_%M')/s5/$mfccdir/storage $mfccdir/storage
+  fi
 
-  #for datadir in ${train_set}_sp ${test_sets}; do
-  #  utils/copy_data_dir.sh data/$datadir data/${datadir}_hires
-  #done
+  for datadir in ${train_set}_sp ${test_sets}; do
+    utils/copy_data_dir.sh data/$datadir data/${datadir}_hires
+  done
 
-  ## do volume-perturbation on the training data prior to extracting hires
-  ## features; this helps make trained nnets more invariant to test data volume.
-  #utils/data/perturb_data_dir_volume.sh data/${train_set}_sp_hires
+  # do volume-perturbation on the training data prior to extracting hires
+  # features; this helps make trained nnets more invariant to test data volume.
+  utils/data/perturb_data_dir_volume.sh data/${train_set}_sp_hires
 
   for datadir in ${train_set}_sp ${test_sets}; do
     steps/make_mfcc.sh --nj $nj --mfcc-config conf/mfcc_hires.conf \
