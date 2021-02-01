@@ -23,7 +23,7 @@ src=`basename ${speech}`
 mkdir -p ${data}
 if [ $stage -le 0 ]; then
   # Make ${data}/wav.scp (recoid command to pipe into feature creation)
-  files=( `find -L ${speech} -name "*.wav"` )
+  files=( `find -L ${speech} -name "*.flac"` )
   
   for f in ${files[@]}; do
     fname=`basename ${f}`;
