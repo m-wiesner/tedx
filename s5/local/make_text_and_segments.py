@@ -94,7 +94,7 @@ def main():
     args = parser.parse_args()
 
     srcname = os.path.basename(args.speech)
-    vtt_files = glob.glob('{}/*/*{}.vtt'.format(args.speech, srcname))
+    vtt_files = glob.glob('{}/data/*/vtt/*.vtt'.format(args.speech, srcname))
     segments = {}
     text = {}
     for fname in vtt_files:

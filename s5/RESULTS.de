@@ -1,0 +1,4 @@
+%WER 39.30 [ 5738 / 14602, 657 ins, 2159 del, 2922 sub ] exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer_9_0.5
+%WER 42.32 [ 6053 / 14302, 674 ins, 1905 del, 3474 sub ] exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer_10_0.0
+%WER 43.16 [ 6281 / 14553, 837 ins, 2505 del, 2939 sub ] exp/chain/cnn_tdnn1c_sp/decode_valid/wer_10_0.5
+%WER 47.20 [ 6742 / 14284, 887 ins, 2315 del, 3540 sub ] exp/chain/cnn_tdnn1c_sp/decode_eval/wer_11_0.0

@@ -4,8 +4,7 @@
 . ./path.sh
 . ./cmd.sh
 
-speech=/export/c24/salesky/tedx
-text=/export/c24/salesky/tedx/text
+speech=/export/c24/salesky/mtedx-final # PATH to mtedx install
 sent_prefix="/export/b14/salesky/kaldi/egs/tedx/"
 
 src=it
@@ -13,7 +12,7 @@ stage=0
 
 . ./utils/parse_options.sh
 
-speech=${speech}/${src}
+speech=${speech}/${src}-${src}
 all_sents=${sent_prefix}${src}/data/all_sentence_asr
 
 if [ $stage -le 0 ]; then

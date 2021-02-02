@@ -19,6 +19,7 @@ speech=$1
 data=$2
 
 src=`basename ${speech}`
+echo ${src%%-*}
 
 mkdir -p ${data}
 if [ $stage -le 0 ]; then
@@ -29,9 +30,9 @@ if [ $stage -le 0 ]; then
     fname=`basename ${f}`;
     channels=`soxi ${f} | grep Channels | awk '{print $3}'`
     if [ $channels -eq 2 ]; then
-      echo "${fname%%.wav} sox ${f} -b 16 -r 16000 -t wav - remix 1,2 |"  
+      echo "${fname%%.flac} sox ${f} -b 16 -r 16000 -t wav - remix 1,2 |"  
     else
-      echo "${fname%%.wav} sox ${f} -c 1 -b 16 -r 16000 -t wav - |"  
+      echo "${fname%%.flac} sox ${f} -c 1 -b 16 -r 16000 -t wav - |"  
     fi
   done | LC_ALL=C sort > ${data}/wav.scp
   
@@ -81,7 +82,7 @@ fi
 
 if [ $stage -le 1 ]; then
   # Make lexicon
-  lexicon=${src}_lexicon
+  lexicon=${src%%-*}_lexicon
   mkdir -p data/dict
   [ ! -f ${!lexicon} ] && echo "Expected ${!lexicon} to exist" && exit 1; 
   ./local/train_g2p.sh <(cut -f 1,2 ${!lexicon}) data/g2p
