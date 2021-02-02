@@ -1,6 +1,4 @@
-%WER 17.55 [ 2546 / 14506, 541 ins, 722 del, 1283 sub ] exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer_9_0.0
-%WER 20.15 [ 3557 / 17653, 641 ins, 1117 del, 1799 sub ] exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer_9_0.0
-%WER 28.22 [ 4388 / 15551, 587 ins, 1500 del, 2301 sub ] exp/chain/cnn_tdnn1c_sp/decode_iwslt2021_sentence/wer_10_0.0
-%WER 18.35 [ 2652 / 14455, 516 ins, 873 del, 1263 sub ] exp/chain/cnn_tdnn1c_sp/decode_valid/wer_9_0.5
-%WER 22.29 [ 3929 / 17627, 674 ins, 1450 del, 1805 sub ] exp/chain/cnn_tdnn1c_sp/decode_eval/wer_10_0.0
-%WER 29.14 [ 4529 / 15544, 663 ins, 1557 del, 2309 sub ] exp/chain/cnn_tdnn1c_sp/decode_iwslt2021/wer_10_0.0
+%WER 17.72 [ 2570 / 14506, 530 ins, 767 del, 1273 sub ] exp/chain/cnn_tdnn1c_sp/decode_valid_sentence/wer_9_0.0
+%WER 20.19 [ 3565 / 17653, 645 ins, 1152 del, 1768 sub ] exp/chain/cnn_tdnn1c_sp/decode_eval_sentence/wer_9_0.0
+%WER 18.42 [ 2662 / 14455, 604 ins, 774 del, 1284 sub ] exp/chain/cnn_tdnn1c_sp/decode_valid/wer_9_0.0
+%WER 22.13 [ 3901 / 17627, 782 ins, 1291 del, 1828 sub ] exp/chain/cnn_tdnn1c_sp/decode_eval/wer_9_0.0
